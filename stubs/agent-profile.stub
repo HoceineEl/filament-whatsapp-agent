@@ -1,0 +1,28 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use HoceineEl\WhatsAppAgent\Agent\AgentContext;
+use HoceineEl\WhatsAppAgent\AgentProfile;
+use HoceineEl\WhatsAppAgent\Contracts\AgentOwner;
+use Illuminate\Database\Eloquent\Model;
+
+class {{ class }} extends AgentProfile
+{
+    public function tools(AgentContext $context): iterable
+    {
+        return [];
+    }
+
+    public function knowledge(AgentContext $context): iterable
+    {
+        return ["## Business facts\n- Name: {$context->owner->agentName()}"];
+    }
+
+    public function blockedReason(AgentOwner $owner, Model $contact): ?string
+    {
+        return null;
+    }
+}

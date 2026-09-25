@@ -1,0 +1,104 @@
+<?php
+
+declare(strict_types=1);
+
+use HoceineEl\WhatsAppAgent\WhatsAppAgent;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        $owners = (new (WhatsAppAgent::ownerModel()))->getTable();
+        $ownerKey = WhatsAppAgent::ownerKey();
+        $contactKey = WhatsAppAgent::contactKey();
+        $tables = config('whatsapp-agent.tables');
+
+        Schema::table($owners, function (Blueprint $table) use ($owners): void {
+            foreach ([
+                'owner_whatsapp' => fn () => $table->string('owner_whatsapp', 32)->nullable(),
+                'whatsapp_driver' => fn () => $table->string('whatsapp_driver', 20)->default('simulator'),
+                'whatsapp_credentials' => fn () => $table->text('whatsapp_credentials')->nullable(),
+                'whatsapp_status' => fn () => $table->string('whatsapp_status', 20)->default('disconnected'),
+                'whatsapp_number' => fn () => $table->string('whatsapp_number', 32)->nullable(),
+                'webhook_token' => fn () => $table->string('webhook_token', 64)->nullable()->unique(),
+            ] as $column => $add) {
+                if (! Schema::hasColumn($owners, $column)) {
+                    $add();
+                }
+            }
+        });
+
+        DB::table($owners)->whereNull('webhook_token')->orderBy('id')->each(
+            fn (object $owner) => DB::table($owners)->where('id', $owner->id)->update(['webhook_token' => Str::random(40)]),
+        );
+
+        Schema::create($tables['contacts'], function (Blueprint $table) use ($owners, $ownerKey): void {
+            $table->id();
+            $table->foreignId($ownerKey)->constrained($owners)->cascadeOnDelete();
+            $table->string('name')->nullable();
+            $table->string('phone', 32);
+            $table->string('locale', 5)->nullable();
+            $table->string('dialect', 60)->nullable();
+            $table->boolean('prefers_voice')->default(false);
+            $table->text('notes')->nullable();
+            $table->timestamp('opted_out_at')->nullable();
+            $table->timestamp('personal_at')->nullable();
+            $table->string('personal_source', 20)->nullable();
+            $table->timestamp('screened_at')->nullable();
+            $table->timestamp('last_seen_at')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+            $table->unique([$ownerKey, 'phone']);
+        });
+
+        Schema::create($tables['conversations'], function (Blueprint $table) use ($owners, $ownerKey, $contactKey, $tables): void {
+            $table->id();
+            $table->foreignId($ownerKey)->constrained($owners)->cascadeOnDelete();
+            $table->foreignId($contactKey)->constrained($tables['contacts'])->cascadeOnDelete();
+            $table->string('status', 20)->default('bot');
+            $table->string('handoff_reason')->nullable();
+            $table->timestamp('handed_off_at')->nullable();
+            $table->foreignId('assigned_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedInteger('unread_count')->default(0);
+            $table->timestamp('last_message_at')->nullable();
+            $table->timestamp('last_inbound_at')->nullable();
+            $table->timestamps();
+            $table->unique([$ownerKey, $contactKey]);
+            $table->index([$ownerKey, 'last_message_at']);
+        });
+
+        Schema::create($tables['messages'], function (Blueprint $table) use ($owners, $ownerKey, $tables): void {
+            $table->id();
+            $table->foreignId($ownerKey)->constrained($owners)->cascadeOnDelete();
+            $table->foreignId('conversation_id')->constrained($tables['conversations'])->cascadeOnDelete();
+            $table->string('direction', 3);
+            $table->string('author', 10);
+            $table->string('type', 20)->default('text');
+            $table->text('body')->nullable();
+            $table->json('payload')->nullable();
+            $table->json('meta')->nullable();
+            $table->string('provider_message_id')->nullable();
+            $table->string('status', 12);
+            $table->string('error')->nullable();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->timestamp('sent_at')->nullable();
+            $table->timestamps();
+            $table->unique([$ownerKey, 'provider_message_id']);
+            $table->index(['conversation_id', 'id']);
+        });
+    }
+
+    public function down(): void
+    {
+        $tables = config('whatsapp-agent.tables');
+
+        Schema::dropIfExists($tables['messages']);
+        Schema::dropIfExists($tables['conversations']);
+        Schema::dropIfExists($tables['contacts']);
+    }
+};
