@@ -78,14 +78,14 @@ class WhatsAppConnection extends Page
 
     public static function canAccess(): bool
     {
-        $tenant = filament()->getTenant();
+        $owner = WhatsAppAgent::currentOwner();
 
-        return $tenant instanceof AgentOwner && WhatsAppAgent::canManage($tenant, auth()->user());
+        return $owner !== null && WhatsAppAgent::canManage($owner, auth()->user());
     }
 
     public static function getNavigationBadge(): ?string
     {
-        $owner = filament()->getTenant();
+        $owner = WhatsAppAgent::currentOwner();
 
         return $owner instanceof AgentOwner && $owner->whatsapp_driver !== WhatsAppDriver::Simulator && $owner->whatsapp_status !== ConnectionStatus::Connected
             ? '!'
@@ -347,7 +347,7 @@ class WhatsAppConnection extends Page
     public function owner(): AgentOwner&Model
     {
         /** @var AgentOwner $owner */
-        $owner = filament()->getTenant();
+        $owner = WhatsAppAgent::currentOwner();
 
         return $owner;
     }

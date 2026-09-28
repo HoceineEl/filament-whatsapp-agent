@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use HoceineEl\WhatsAppAgent\Agent\AgentContext;
 use HoceineEl\WhatsAppAgent\AgentProfile;
+use HoceineEl\WhatsAppAgent\Models\WhatsAppAccount;
 use HoceineEl\WhatsAppAgent\Tests\Fixtures\StoreProfile;
 use HoceineEl\WhatsAppAgent\WhatsAppAgent;
 use Illuminate\Support\Facades\File;
@@ -43,18 +44,39 @@ function customerContext(): AgentContext
     return AgentContext::for(customerSays(store(), 'hi')->conversation);
 }
 
-it('installs with a profile registered in the config', function () {
+it('installs for a multi-tenant panel with a profile registered in the config', function () {
     $config = config_path('whatsapp-agent.php');
     $profile = app_path('Ai/ShopAgentProfile.php');
     $this->beforeApplicationDestroyed(fn () => File::delete([$config, $profile, ...File::glob(database_path('migrations/*_create_whatsapp_agent_tables.php'))]));
 
     $this->artisan('whatsapp-agent:install')
+        ->expectsConfirmation('Does your panel use Filament multi-tenancy (one WhatsApp number per team)?', 'yes')
         ->expectsConfirmation('Would you like to run the migrations now?', 'no')
         ->expectsConfirmation('Create your agent profile class (tools, prompt knowledge, reply gate)?', 'yes')
         ->expectsQuestion('Class name', 'ShopAgentProfile')
         ->assertSuccessful();
 
     expect(File::get($config))->toContain("'profile' => App\\Ai\\ShopAgentProfile::class,")
+        ->toContain("'owner' => null,")
         ->and(File::exists($profile))->toBeTrue();
+});
 
+it('installs for a single-tenant panel with the built-in account', function () {
+    $config = config_path('whatsapp-agent.php');
+    $this->beforeApplicationDestroyed(fn () => File::delete([$config, ...File::glob(database_path('migrations/*_create_whatsapp_agent_tables.php'))]));
+
+    $this->artisan('whatsapp-agent:install')
+        ->expectsConfirmation('Does your panel use Filament multi-tenancy (one WhatsApp number per team)?', 'no')
+        ->expectsConfirmation('Would you like to run the migrations now?', 'no')
+        ->expectsConfirmation('Create your agent profile class (tools, prompt knowledge, reply gate)?', 'no')
+        ->assertSuccessful();
+
+    expect(File::get($config))->toContain("'owner' => ".WhatsAppAccount::class.'::class,')
+        ->toContain("'owner' => 'whatsapp_account_id',");
+});
+
+it('has no current owner before an owner model is configured', function () {
+    config(['whatsapp-agent.models.owner' => null]);
+
+    expect(WhatsAppAgent::currentOwner())->toBeNull();
 });

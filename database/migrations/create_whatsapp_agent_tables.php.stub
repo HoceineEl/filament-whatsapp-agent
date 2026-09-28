@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use HoceineEl\WhatsAppAgent\Models\WhatsAppAccount;
 use HoceineEl\WhatsAppAgent\WhatsAppAgent;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -17,6 +18,19 @@ return new class extends Migration
         $ownerKey = WhatsAppAgent::ownerKey();
         $contactKey = WhatsAppAgent::contactKey();
         $tables = config('whatsapp-agent.tables');
+
+        if ($this->ownsAccountsTable() && ! Schema::hasTable($owners)) {
+            Schema::create($owners, function (Blueprint $table): void {
+                $table->id();
+                $table->string('name');
+                $table->string('slug');
+                $table->string('locale', 5)->nullable();
+                $table->string('timezone')->nullable();
+                $table->boolean('is_active')->default(true);
+                $table->json('settings')->nullable();
+                $table->timestamps();
+            });
+        }
 
         Schema::table($owners, function (Blueprint $table) use ($owners): void {
             foreach ([
@@ -100,5 +114,14 @@ return new class extends Migration
         Schema::dropIfExists($tables['messages']);
         Schema::dropIfExists($tables['conversations']);
         Schema::dropIfExists($tables['contacts']);
+
+        if ($this->ownsAccountsTable()) {
+            Schema::dropIfExists((new (WhatsAppAgent::ownerModel()))->getTable());
+        }
+    }
+
+    private function ownsAccountsTable(): bool
+    {
+        return is_a(WhatsAppAgent::ownerModel(), WhatsAppAccount::class, true);
     }
 };

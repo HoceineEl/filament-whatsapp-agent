@@ -1,6 +1,6 @@
 # Filament WhatsApp Agent
 
-An AI assistant that answers your customers on WhatsApp, inside any multi-tenant Filament 5 app.
+An AI assistant that answers your customers on WhatsApp, inside any Filament 5 app: one WhatsApp number for the whole app, or one per tenant.
 
 - **Channels:** Evolution API (link by QR or pairing code), the official Cloud API, and a simulator.
 - **Inbox:** one shared inbox with take-over and hand-back, and handoff alerts on the owner's phone.
@@ -21,13 +21,24 @@ php artisan whatsapp-agent:install
 
 The installer:
 
+- asks whether your panel uses Filament multi-tenancy;
 - publishes the config and the migration, then offers to run it;
 - creates your profile class in `app/Ai` and registers it in the config;
 - publishes the CSS.
 
-The migration adds the WhatsApp columns to your owner (tenant) table. It also creates the `whatsapp_contacts`, `whatsapp_conversations` and `whatsapp_messages` tables. If you already have tables for contacts, conversations and messages, point `models`, `tables` and `columns` in the config at your own models instead. Those models use the `IsAgentContact`, `IsAgentConversation` and `IsAgentMessage` traits.
+### Single-tenant apps
 
-After the installer, two changes in your code:
+Answer "no" to the tenancy question and the package brings its own owner model, `WhatsAppAccount`. The migration creates the `whatsapp_accounts` table and the first account is created on first use, so the only change in your code is the plugin:
+
+```php
+$panel->plugin(WhatsAppAgentPlugin::make());
+```
+
+Handoff alerts go to every user your profile's `canManage()` allows. Settings, credentials and the assistant's name live on the account (`WhatsAppAgent::currentOwner()`).
+
+### Multi-tenant apps
+
+Answer "yes" and point `models.owner` in the config at your tenant model. The migration adds the WhatsApp columns to that table. Each tenant gets its own number, inbox and assistant.
 
 ```php
 class Business extends Model implements AgentOwner
@@ -41,6 +52,10 @@ class Business extends Model implements AgentOwner
 $panel->plugin(WhatsAppAgentPlugin::make()
     ->navigationGroups(['inbox' => 'sales', 'playground' => 'sales', 'connection' => 'settings']));
 ```
+
+### Your own tables
+
+The migration also creates the `whatsapp_contacts`, `whatsapp_conversations` and `whatsapp_messages` tables. If you already have tables for contacts, conversations and messages, point `models`, `tables` and `columns` in the config at your own models instead. Those models use the `IsAgentContact`, `IsAgentConversation` and `IsAgentMessage` traits.
 
 ## Your agent profile
 

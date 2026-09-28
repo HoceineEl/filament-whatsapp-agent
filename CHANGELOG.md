@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Single-tenant mode: a built-in `WhatsAppAccount` owner for panels without tenancy, chosen in the installer. The inbox, playground and connection pages resolve the owner through `WhatsAppAgent::currentOwner()`.
+- The installer asks about tenancy before publishing, so migrations run with the right owner table.
 - Customers who opted out with STOP no longer receive assistant replies until they opt back in; keywords also match with trailing punctuation.
 - A retried reply job no longer answers the same message twice.
 - The reply job now runs on the queue set in `whatsapp-agent.queue`.

@@ -49,6 +49,11 @@ class Inbox extends Page
         return 'inbox';
     }
 
+    public static function canAccess(): bool
+    {
+        return WhatsAppAgent::currentOwner() !== null && parent::canAccess();
+    }
+
     public static function getNavigationLabel(): string
     {
         return __('whatsapp-agent::inbox.title');

@@ -41,6 +41,11 @@ class Playground extends Page
         return 'playground';
     }
 
+    public static function canAccess(): bool
+    {
+        return WhatsAppAgent::currentOwner() !== null && parent::canAccess();
+    }
+
     public static function getNavigationLabel(): string
     {
         return __('whatsapp-agent::playground.title');
@@ -61,7 +66,7 @@ class Playground extends Page
      */
     public function suggestions(): array
     {
-        return WhatsAppAgent::suggestionsFor(filament()->getTenant());
+        return WhatsAppAgent::suggestionsFor(WhatsAppAgent::currentOwner());
     }
 
     #[Computed]
@@ -88,7 +93,7 @@ class Playground extends Page
         }
 
         /** @var AgentOwner $owner */
-        $owner = filament()->getTenant();
+        $owner = WhatsAppAgent::currentOwner();
 
         $message = app(ConversationRecorder::class)->recordInbound($owner, new InboundMessage(
             providerMessageId: 'play_'.Str::ulid(),
@@ -112,7 +117,7 @@ class Playground extends Page
         $contact = WhatsAppAgent::tenantQuery(WhatsAppAgent::contactModel())->withPhone($this->sandboxPhone())->first();
 
         if ($contact !== null) {
-            WhatsAppAgent::resetSandbox(filament()->getTenant(), $contact);
+            WhatsAppAgent::resetSandbox(WhatsAppAgent::currentOwner(), $contact);
             $contact->conversation?->delete();
             method_exists($contact, 'forceDelete') ? $contact->forceDelete() : $contact->delete();
         }
@@ -122,6 +127,6 @@ class Playground extends Page
 
     private function sandboxPhone(): string
     {
-        return WhatsAppAgent::contactModel()::sandboxPhone((int) filament()->getTenant()->getKey(), (int) auth()->id());
+        return WhatsAppAgent::contactModel()::sandboxPhone((int) WhatsAppAgent::currentOwner()->getKey(), (int) auth()->id());
     }
 }

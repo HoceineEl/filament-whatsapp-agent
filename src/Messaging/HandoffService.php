@@ -10,6 +10,7 @@ use Filament\Support\Icons\Heroicon;
 use HoceineEl\WhatsAppAgent\Enums\ConversationStatus;
 use HoceineEl\WhatsAppAgent\Enums\MessageAuthor;
 use HoceineEl\WhatsAppAgent\Filament\Pages\Inbox;
+use HoceineEl\WhatsAppAgent\WhatsAppAgent;
 use Illuminate\Database\Eloquent\Model;
 
 class HandoffService
@@ -30,7 +31,7 @@ class HandoffService
 
         $owner = $conversation->owner;
         $customer = $conversation->contact;
-        $inboxUrl = rescue(fn (): string => Inbox::getUrl(['conversation' => $conversation->getKey()], panel: config('whatsapp-agent.panel'), tenant: $owner), report: false);
+        $inboxUrl = rescue(fn (): string => Inbox::getUrl(['conversation' => $conversation->getKey()], panel: config('whatsapp-agent.panel'), tenant: WhatsAppAgent::isSingleTenant() ? null : $owner), report: false);
 
         Notification::make()
             ->title(__('whatsapp-agent::conversations.handoff.notification_title', ['name' => $customer->displayName()], $owner->agentLocale()))

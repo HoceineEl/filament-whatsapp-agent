@@ -1,6 +1,7 @@
 @php
     use HoceineEl\WhatsAppAgent\Enums\ConversationStatus;
-    $owner = filament()->getTenant();
+    use HoceineEl\WhatsAppAgent\WhatsAppAgent;
+    $owner = WhatsAppAgent::currentOwner();
     $active = $this->active;
 @endphp
 <x-filament-panels::page>

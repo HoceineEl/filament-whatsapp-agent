@@ -14,6 +14,7 @@ use Filament\Notifications\NotificationsServiceProvider;
 use Filament\Schemas\SchemasServiceProvider;
 use Filament\Support\SupportServiceProvider;
 use Filament\Widgets\WidgetsServiceProvider;
+use HoceineEl\WhatsAppAgent\Tests\Fixtures\AdminPanelProvider;
 use HoceineEl\WhatsAppAgent\Tests\Fixtures\Store;
 use HoceineEl\WhatsAppAgent\Tests\Fixtures\StoreProfile;
 use HoceineEl\WhatsAppAgent\Tests\Fixtures\User;
@@ -73,6 +74,7 @@ abstract class TestCase extends Orchestra
             SupportServiceProvider::class,
             WidgetsServiceProvider::class,
             WhatsAppAgentServiceProvider::class,
+            AdminPanelProvider::class,
         ];
     }
 
@@ -81,6 +83,7 @@ abstract class TestCase extends Orchestra
         $app['config']->set('database.default', 'testing');
         $app['config']->set('queue.default', 'sync');
         $app['config']->set('whatsapp-agent.models.owner', Store::class);
+        $app['config']->set('whatsapp-agent.columns.owner', 'business_id');
         $app['config']->set('whatsapp-agent.models.user', User::class);
         $app['config']->set('whatsapp-agent.profile', StoreProfile::class);
         $app['config']->set('whatsapp-agent.reply_debounce_seconds', 0);

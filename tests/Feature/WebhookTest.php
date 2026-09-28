@@ -8,26 +8,6 @@ use HoceineEl\WhatsAppAgent\Models\Contact;
 use HoceineEl\WhatsAppAgent\Models\Message;
 use Illuminate\Support\Facades\Queue;
 
-function postEvolution($store, array $payload, ?string $token = null)
-{
-    return test()->postJson(
-        route('webhooks.whatsapp', ['driver' => 'evolution', 'token' => $store->webhook_token]),
-        $payload,
-        [config('whatsapp-agent.evolution.token_header') => $token ?? $store->webhook_token],
-    );
-}
-
-function evolutionText(string $text): array
-{
-    return ['event' => 'messages.upsert', 'instance' => 'wa_corner-shop', 'data' => [
-        'key' => ['remoteJid' => '971501234567@s.whatsapp.net', 'fromMe' => false, 'id' => 'EV1'],
-        'pushName' => 'Sara',
-        'message' => ['conversation' => $text],
-        'messageType' => 'conversation',
-        'messageTimestamp' => now()->timestamp,
-    ]];
-}
-
 it('records an inbound evolution message and queues the reply', function () {
     Queue::fake();
     $store = store(['whatsapp_driver' => WhatsAppDriver::Evolution]);

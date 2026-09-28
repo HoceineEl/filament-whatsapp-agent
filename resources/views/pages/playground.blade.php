@@ -1,5 +1,6 @@
 @php
-    $owner = filament()->getTenant();
+    use HoceineEl\WhatsAppAgent\WhatsAppAgent;
+    $owner = WhatsAppAgent::currentOwner();
 @endphp
 <x-filament-panels::page>
     <div class="wa-play">

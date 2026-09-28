@@ -7,6 +7,7 @@ namespace HoceineEl\WhatsAppAgent;
 use Closure;
 use HoceineEl\WhatsAppAgent\Agent\AgentContext;
 use HoceineEl\WhatsAppAgent\Contracts\AgentOwner;
+use HoceineEl\WhatsAppAgent\Models\WhatsAppAccount;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
@@ -162,16 +163,41 @@ final class WhatsAppAgent
     }
 
     /**
-     * A query on one of the agent models, limited to the current Filament tenant when there is one.
+     * The Filament tenant in multi-tenant panels, otherwise the app's single WhatsApp account.
+     */
+    public static function currentOwner(): (Model&AgentOwner)|null
+    {
+        $tenant = filament()->getTenant();
+
+        if ($tenant instanceof AgentOwner) {
+            return $tenant;
+        }
+
+        $model = config('whatsapp-agent.models.owner');
+
+        return match (true) {
+            blank($model) => null,
+            is_a($model, WhatsAppAccount::class, true) => $model::current(),
+            default => $model::query()->oldest($model::make()->getKeyName())->first(),
+        };
+    }
+
+    public static function isSingleTenant(): bool
+    {
+        return ! (filament()->getPanel(config('whatsapp-agent.panel'), isStrict: false)?->hasTenancy() ?? false);
+    }
+
+    /**
+     * A query on one of the agent models, limited to the current owner.
      *
      * @param  class-string<Model>  $model
      * @return Builder<Model>
      */
     public static function tenantQuery(string $model): Builder
     {
-        $tenant = filament()->getTenant();
+        $owner = self::currentOwner();
 
-        return $tenant instanceof AgentOwner ? $model::query()->forOwner($tenant) : $model::query();
+        return $owner !== null ? $model::query()->forOwner($owner) : $model::query()->whereRaw('1 = 0');
     }
 
     public static function ownerKey(): string
