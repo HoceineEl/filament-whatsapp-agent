@@ -54,7 +54,12 @@ class AgentRuntime
         $conversation = $inbound->conversation;
         $owner = $conversation->owner;
 
-        if (! $owner->agentIsActive() || ! $inbound->isInbound() || $this->hasNewerInbound($inbound)) {
+        if (
+            ! $owner->agentIsActive()
+            || ! $inbound->isInbound()
+            || $this->hasNewerInbound($inbound)
+            || $this->alreadyAnswered($inbound)
+        ) {
             return null;
         }
 
@@ -64,7 +69,7 @@ class AgentRuntime
             return null;
         }
 
-        $keyword = mb_strtolower(trim((string) $inbound->body));
+        $keyword = mb_strtolower(trim((string) $inbound->body, " \t\n\r\0\x0B.!?؟"));
 
         if (in_array($keyword, self::OPT_OUT, true)) {
             $context->contact->update(['opted_out_at' => now()]);
@@ -76,6 +81,10 @@ class AgentRuntime
             $context->contact->update(['opted_out_at' => null]);
 
             return $this->sender->send($conversation, __('whatsapp-agent::assistant.opted_in', locale: $context->locale()));
+        }
+
+        if ($context->contact->isOptedOut()) {
+            return null;
         }
 
         if (WhatsAppAgent::intercept($inbound, $context)) {
@@ -244,10 +253,21 @@ class AgentRuntime
 
     private function hasNewerInbound(Model $inbound): bool
     {
-        return $this->conversationMessages($inbound->ownerId(), $inbound->conversation_id)
-            ->inbound()
-            ->where('id', '>', $inbound->getKey())
-            ->exists();
+        return $this->messagesAfter($inbound)->inbound()->exists();
+    }
+
+    /**
+     * A retried job must not answer twice when an earlier attempt already sent part of the reply.
+     */
+    private function alreadyAnswered(Model $inbound): bool
+    {
+        return $this->messagesAfter($inbound)->outbound()->exists();
+    }
+
+    private function messagesAfter(Model $message): Builder
+    {
+        return $this->conversationMessages($message->ownerId(), $message->conversation_id)
+            ->where('id', '>', $message->getKey());
     }
 
     /**

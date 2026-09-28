@@ -24,7 +24,10 @@ class ProcessInboundMessage implements ShouldBeUnique, ShouldQueue
 
     public int $timeout = 120;
 
-    public function __construct(public Model $message) {}
+    public function __construct(public Model $message)
+    {
+        $this->onQueue(config('whatsapp-agent.queue'));
+    }
 
     public function uniqueId(): string
     {

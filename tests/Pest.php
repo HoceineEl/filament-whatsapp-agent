@@ -9,10 +9,9 @@ use HoceineEl\WhatsAppAgent\Models\Message;
 use HoceineEl\WhatsAppAgent\Tests\Fixtures\Store;
 use HoceineEl\WhatsAppAgent\Tests\Fixtures\StoreProfile;
 use HoceineEl\WhatsAppAgent\Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 
-uses(TestCase::class, RefreshDatabase::class)->in(__DIR__);
+uses(TestCase::class)->in(__DIR__);
 
 uses()->afterEach(fn () => StoreProfile::$blocked = null)->in('Feature');
 

@@ -14,6 +14,7 @@ use HoceineEl\WhatsAppAgent\Contracts\AgentOwner;
 use HoceineEl\WhatsAppAgent\Enums\MessageStatus;
 use HoceineEl\WhatsAppAgent\Enums\MessageType;
 use HoceineEl\WhatsAppAgent\Exceptions\WhatsAppException;
+use HoceineEl\WhatsAppAgent\Support\HttpRetry;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Http\Request;
@@ -198,7 +199,7 @@ class CloudApiGateway implements WhatsAppGateway
             ->acceptJson()
             ->timeout((int) config('whatsapp-agent.http.timeout'))
             ->connectTimeout((int) config('whatsapp-agent.http.connect_timeout'))
-            ->retry((int) config('whatsapp-agent.http.retries'), 300, throw: false);
+            ->retry((int) config('whatsapp-agent.http.retries'), 300, HttpRetry::shouldRetry(...), throw: false);
     }
 
     private function endpoint(AgentOwner $owner, string $path): string
